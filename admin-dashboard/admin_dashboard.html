@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GigShield AI — Admin Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
+    --accent: #6c63ff; --accent2: #00d4aa; --danger: #ff4d6d;
+    --warn: #ffb347; --text: #e8eaf0; --muted: #7c82a0;
+    --border: #2e3248; --green: #00c896; --red: #ff4d6d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 16px 32px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { font-size: 20px; font-weight: 700; }
+  .logo span { color: var(--accent); }
+  .badge { background: var(--accent2); color: #000; font-size: 11px; font-weight: 700;
+    padding: 3px 8px; border-radius: 20px; margin-left: 10px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+    display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+  .section-title { font-size: 13px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+
+  /* Metrics */
+  .metrics-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 32px; }
+  .metric-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; position: relative; overflow: hidden;
+  }
+  .metric-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background: var(--accent); }
+  .metric-card.green::before { background: var(--green); }
+  .metric-card.warn::before { background: var(--warn); }
+  .metric-card.danger::before { background: var(--danger); }
+  .metric-card.teal::before { background: var(--accent2); }
+  .metric-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .metric-value { font-size: 28px; font-weight: 700; }
+  .metric-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Two col layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px;
+  }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 18px;
+    display: flex; align-items: center; justify-content: space-between; }
+
+  /* Fraud queue table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 500;
+    padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .chip {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .chip-warn { background: rgba(255,179,71,.15); color: var(--warn); }
+  .chip-green { background: rgba(0,200,150,.15); color: var(--green); }
+  .chip-red { background: rgba(255,77,109,.15); color: var(--red); }
+  .chip-blue { background: rgba(108,99,255,.15); color: var(--accent); }
+
+  /* Demo trigger panel */
+  .demo-panel { margin-bottom: 32px; }
+  .demo-form {
+    display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 12px; align-items: end;
+  }
+  .field label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
+  select, input[type=number], input[type=text] {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 9px 12px; font-size: 13px; width: 100%; outline: none;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+  .btn {
+    padding: 10px 20px; border-radius: 8px; border: none; font-size: 13px;
+    font-weight: 600; cursor: pointer; transition: opacity .15s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-teal { background: var(--accent2); color: #000; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-approve { background: var(--green); color: #000; }
+  .btn-reject { background: var(--danger); color: #fff; }
+
+  /* Result box */
+  .result-box {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px; margin-top: 16px; font-size: 13px; display: none;
+  }
+  .result-box.show { display: block; }
+  .result-row { display: flex; justify-content: space-between; padding: 5px 0;
+    border-bottom: 1px solid var(--border); }
+  .result-row:last-child { border-bottom: none; }
+  .result-key { color: var(--muted); }
+  .result-val { font-weight: 600; }
+  .result-val.green { color: var(--green); }
+  .result-val.red { color: var(--danger); }
+  .result-val.warn { color: var(--warn); }
+
+  /* Weather panel */
+  .weather-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .weather-zone {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; cursor: pointer; transition: border-color .15s;
+  }
+  .weather-zone:hover { border-color: var(--accent); }
+  .weather-zone.triggered { border-color: var(--warn); }
+  .zone-name { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+  .zone-rain { font-size: 22px; font-weight: 700; }
+  .zone-sev { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .loader { display: inline-block; width: 14px; height: 14px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .6s linear infinite; margin-left: 8px; vertical-align: middle; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px;
+    font-size: 13px; z-index: 999; opacity: 0; transition: opacity .3s;
+    max-width: 320px;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">GigShield <span>AI</span> <span class="badge">ADMIN</span></div>
+  <div style="font-size:13px;color:var(--muted)">
+    <span class="status-dot"></span> Backend live &nbsp;|&nbsp;
+    <span id="last-refresh">Refreshing...</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- METRICS -->
+  <div class="section-title">Platform Metrics</div>
+  <div class="metrics-grid">
+    <div class="metric-card green">
+      <div class="metric-label">Active Policies</div>
+      <div class="metric-value" id="m-policies">—</div>
+      <div class="metric-sub">Workers covered</div>
+    </div>
+    <div class="metric-card teal">
+      <div class="metric-label">Weekly Premium</div>
+      <div class="metric-value" id="m-premium">—</div>
+      <div class="metric-sub">Collected this week</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Payouts This Week</div>
+      <div class="metric-value" id="m-payouts">—</div>
+      <div class="metric-sub">Auto-disbursed</div>
+    </div>
+    <div class="metric-card warn">
+      <div class="metric-label">Loss Ratio</div>
+      <div class="metric-value" id="m-ratio">—</div>
+      <div class="metric-sub">Payouts / Premiums</div>
+    </div>
+    <div class="metric-card danger">
+      <div class="metric-label">Fraud Queue</div>
+      <div class="metric-value" id="m-fraud">—</div>
+      <div class="metric-sub">Pending review</div>
+    </div>
+  </div>
+
+  <!-- DEMO TRIGGER -->
+  <div class="demo-panel card">
+    <div class="card-title">
+      🎯 Live Payout Simulator
+      <button class="btn btn-teal btn-sm" onclick="pollWeather()">Poll All Zones</button>
+    </div>
+    <div class="demo-form">
+      <div class="field">
+        <label>Event Type</label>
+        <select id="d-event">
+          <option value="heavy_rain">Heavy Rain</option>
+          <option value="flood">Flood</option>
+          <option value="extreme_heat">Extreme Heat</option>
+          <option value="aqi_spike">AQI Spike</option>
+          <option value="bandh">Bandh / Curfew</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Zone</label>
+        <select id="d-zone">
+          <option value="HSR_LAYOUT_BLR">HSR Layout, Bengaluru</option>
+          <option value="KORAMANGALA_BLR">Koramangala, Bengaluru</option>
+          <option value="BANDRA_MUM">Bandra, Mumbai</option>
+          <option value="ANDHERI_MUM">Andheri, Mumbai</option>
+          <option value="ADYAR_CHN">Adyar, Chennai</option>
+          <option value="T_NAGAR_CHN">T. Nagar, Chennai</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Severity</label>
+        <select id="d-severity">
+          <option value="mild">Mild</option>
+          <option value="moderate" selected>Moderate</option>
+          <option value="severe">Severe</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Rainfall (mm)</label>
+        <input type="number" id="d-value" value="45" min="0" max="200"/>
+      </div>
+      <button class="btn btn-primary" onclick="triggerDemo()">
+        ▶ Run Simulation
+      </button>
+    </div>
+
+    <div class="result-box" id="demo-result">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px" id="result-header">Result</div>
+      <div id="result-rows"></div>
+    </div>
+  </div>
+
+  <!-- FRAUD QUEUE + WEATHER -->
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">
+        🚨 Fraud Review Queue
+        <button class="btn btn-sm" style="background:var(--surface2);color:var(--text)" onclick="loadFraudQueue()">Refresh</button>
+      </div>
+      <div id="fraud-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Claim</th><th>Worker</th><th>Zone</th><th>Drop%</th><th>Score</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="fraud-tbody">
+            <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:24px">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        🌧 Zone Weather Status
+        <button class="btn btn-sm" style="background:var(--surface2);color:var(--text)" onclick="loadWeather()">Refresh</button>
+      </div>
+      <div class="weather-grid" id="weather-grid">
+        <div style="color:var(--muted);font-size:13px;grid-column:1/-1;text-align:center;padding:24px">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:8000';
+
+function showToast(msg, color) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = color || 'var(--border)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function fmt(n) {
+  if (n === null || n === undefined) return '—';
+  if (typeof n === 'number') return n >= 1000 ? '₹' + (n/1000).toFixed(1) + 'k' : '₹' + n.toFixed(0);
+  return n;
+}
+
+// ── METRICS ──────────────────────────────────────────────
+async function loadMetrics() {
+  try {
+    const r = await fetch(`${API}/admin/metrics`);
+    const d = await r.json();
+    document.getElementById('m-policies').textContent = d.total_active_policies ?? '—';
+    document.getElementById('m-premium').textContent = fmt(d.weekly_premium_collected);
+    document.getElementById('m-payouts').textContent = fmt(d.total_payouts_this_week);
+    document.getElementById('m-ratio').textContent = d.loss_ratio !== undefined ? (d.loss_ratio * 100).toFixed(1) + '%' : '—';
+    document.getElementById('m-fraud').textContent = d.fraud_flags_count ?? '—';
+    document.getElementById('last-refresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    console.warn('Metrics fetch failed:', e);
+    // Show mock data so dashboard is useful even without DB
+    document.getElementById('m-policies').textContent = '142';
+    document.getElementById('m-premium').textContent = '₹10.7k';
+    document.getElementById('m-payouts').textContent = '₹4.2k';
+    document.getElementById('m-ratio').textContent = '39.2%';
+    document.getElementById('m-fraud').textContent = '3';
+    document.getElementById('last-refresh').textContent = 'Mock data (backend offline)';
+  }
+}
+
+// ── FRAUD QUEUE ───────────────────────────────────────────
+async function loadFraudQueue() {
+  const tbody = document.getElementById('fraud-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">Loading...</td></tr>';
+  try {
+    const r = await fetch(`${API}/admin/fraud-queue`);
+    const items = await r.json();
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:24px">✅ Queue empty</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(item => `
+      <tr>
+        <td><span class="chip chip-blue">#${item.claim_id}</span></td>
+        <td>${item.worker_name}</td>
+        <td style="font-size:11px;color:var(--muted)">${item.zone}</td>
+        <td><span class="chip ${item.drop_pct > 50 ? 'chip-red' : 'chip-warn'}">${item.drop_pct}%</span></td>
+        <td><span class="chip chip-warn">${item.anomaly_score}</span></td>
+        <td style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-approve" onclick="reviewClaim('${item.claim_id}','approve')">✓</button>
+          <button class="btn btn-sm btn-reject" onclick="reviewClaim('${item.claim_id}','reject')">✗</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    // Mock fallback
+    tbody.innerHTML = `
+      <tr>
+        <td><span class="chip chip-blue">#1042</span></td>
+        <td>Rajan Kumar</td>
+        <td style="font-size:11px;color:var(--muted)">HSR_LAYOUT_BLR</td>
+        <td><span class="chip chip-warn">35%</span></td>
+        <td><span class="chip chip-warn">72</span></td>
+        <td style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-approve" onclick="reviewClaim('1042','approve')">✓</button>
+          <button class="btn btn-sm btn-reject" onclick="reviewClaim('1042','reject')">✗</button>
+        </td>
+      </tr>`;
+  }
+}
+
+async function reviewClaim(id, decision) {
+  try {
+    await fetch(`${API}/admin/claims/${id}/review`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({decision, reason: `Admin ${decision}d via dashboard`})
+    });
+    showToast(`Claim #${id} ${decision}d`, decision === 'approve' ? 'var(--green)' : 'var(--danger)');
+    setTimeout(loadFraudQueue, 800);
+  } catch(e) {
+    showToast(`Error: ${e.message}`, 'var(--danger)');
+  }
+}
+
+// ── WEATHER ───────────────────────────────────────────────
+const ZONES = [
+  'HSR_LAYOUT_BLR','KORAMANGALA_BLR','BANDRA_MUM',
+  'ANDHERI_MUM','ADYAR_CHN','T_NAGAR_CHN'
+];
+const SEV_COLOR = { none:'var(--muted)', mild:'var(--accent2)', moderate:'var(--warn)', severe:'var(--danger)' };
+
+async function loadWeather() {
+  const grid = document.getElementById('weather-grid');
+  grid.innerHTML = '<div style="color:var(--muted);font-size:13px;grid-column:1/-1;text-align:center;padding:16px">Fetching zones...</div>';
+  const results = await Promise.all(ZONES.map(z =>
+    fetch(`${API}/weather/zone/${z}`).then(r => r.json()).catch(() => ({
+      zone_id: z, current_rain_mm: 0, severity: 'none', triggered: false,
+      temperature_c: 30, description: 'unavailable'
+    }))
+  ));
+  grid.innerHTML = results.map(z => `
+    <div class="weather-zone ${z.triggered ? 'triggered' : ''}"
+         onclick="document.getElementById('d-zone').value='${z.zone_id}';document.getElementById('d-value').value='${z.current_rain_mm}'">
+      <div class="zone-name">${z.zone_id.replace(/_/g,' ')}</div>
+      <div class="zone-rain" style="color:${SEV_COLOR[z.severity] || 'var(--text)'}">
+        ${z.current_rain_mm} mm
+      </div>
+      <div class="zone-sev">
+        ${z.severity.toUpperCase()} · ${z.temperature_c}°C
+        ${z.triggered ? ' 🔴' : ' ✅'}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function pollWeather() {
+  showToast('Polling all zones + triggering Celery...', 'var(--accent)');
+  try {
+    const r = await fetch(`${API}/weather/poll-and-trigger`, {method:'POST'});
+    const d = await r.json();
+    showToast(`${d.triggered_count}/${d.zones_checked} zones triggered`, d.triggered_count > 0 ? 'var(--warn)' : 'var(--green)');
+    loadWeather();
+  } catch(e) {
+    showToast('Poll failed — is backend running?', 'var(--danger)');
+  }
+}
+
+// ── DEMO TRIGGER ──────────────────────────────────────────
+async function triggerDemo() {
+  const payload = {
+    event_type: document.getElementById('d-event').value,
+    zone:       document.getElementById('d-zone').value,
+    severity:   document.getElementById('d-severity').value,
+    event_value: parseFloat(document.getElementById('d-value').value),
+  };
+
+  const box = document.getElementById('demo-result');
+  const rows = document.getElementById('result-rows');
+  const hdr  = document.getElementById('result-header');
+  box.classList.add('show');
+  rows.innerHTML = '<div style="color:var(--muted)">Running simulation<span class="loader"></span></div>';
+
+  try {
+    const r = await fetch(`${API}/admin/demo/trigger-event`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+
+    const statusColor = d.status === 'COMPLETED' ? 'green' : d.status === 'MANUAL_REVIEW' ? 'warn' : 'red';
+    hdr.innerHTML = `Result — <span class="chip chip-${statusColor === 'green' ? 'green' : statusColor === 'warn' ? 'warn' : 'red'}">${d.status}</span>`;
+
+    const fields = [
+      ['Payout Amount',   d.amount_inr > 0 ? `₹${d.amount_inr.toFixed(0)}` : '₹0',  d.amount_inr > 0 ? 'green' : 'red'],
+      ['Defense',         d.defense_decision, d.defense_decision === 'APPROVED' ? 'green' : d.defense_decision === 'MANUAL_REVIEW' ? 'warn' : 'red'],
+      ['UPI',             d.upi_id, ''],
+      ['Income Drop',     d.drop_pct + '%', ''],
+      ['Trigger',         d.event?.type + ' (' + d.event?.severity + ')', ''],
+      ['Razorpay ID',     d.razorpay_mock_id || 'N/A', ''],
+      ['Message',         d.message, ''],
+      ['Exclusion',       d.rejection_code === 'ADVERSARIAL_DEFENSE' ? '🛡 Anti-spoofing triggered' :
+                          d.rejection_code ? '🚫 ' + d.rejection_code : '✅ None', ''],
+    ];
+
+    rows.innerHTML = fields.map(([k,v,c]) =>
+      `<div class="result-row">
+        <span class="result-key">${k}</span>
+        <span class="result-val ${c}">${v}</span>
+      </div>`
+    ).join('');
+
+    showToast(`Simulation complete: ${d.status}`, d.status === 'COMPLETED' ? 'var(--green)' : 'var(--warn)');
+    loadMetrics();
+  } catch(e) {
+    rows.innerHTML = `<div style="color:var(--danger)">Error: ${e.message}</div>`;
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────
+loadMetrics();
+loadFraudQueue();
+loadWeather();
+setInterval(loadMetrics, 30000);   // refresh metrics every 30s
+setInterval(loadFraudQueue, 60000); // refresh fraud queue every 60s
+</script>
+</body>
+</html>
